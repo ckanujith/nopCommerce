@@ -36,7 +36,9 @@ public class LocalizationMigration : MigrationBase
 
         this.AddOrUpdateLocaleResource(new Dictionary<string, string>
         {
-            
+            ["Admin.Configuration.AppSettings.Common.MaxPenaltyMinutes"] = "Max penalty (minutes)",
+            ["Admin.Configuration.AppSettings.Common.MaxPenaltyMinutes.Hint"] = "Upper bound for the exponential penalty applied to a client that keeps exceeding the permit limit in consecutive windows (1, 2, 4, 8 ... minutes). If set to 0, then there is no escalation. Admin area requests never escalate.",
+            ["Admin.Configuration.AppSettings.Common.RejectionStatusCode.Hint"] = "Default status code to set on the response when a request is rejected. A Retry-After header is always sent.",
         });
 
         #endregion
