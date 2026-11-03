@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Nop.Services.ScheduleTasks;
 
 namespace Nop.Web.Controllers;
@@ -20,6 +21,7 @@ public partial class ScheduleTaskController : Controller
 
     [HttpPost]
     [IgnoreAntiforgeryToken]
+    [DisableRateLimiting]
     public virtual async Task<IActionResult> RunTask(string taskType)
     {
         var scheduleTask = await _scheduleTaskService.GetTaskByTypeAsync(taskType);

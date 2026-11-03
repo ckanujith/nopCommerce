@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Text.Encodings.Web;
-using System.Threading.RateLimiting;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -27,6 +26,7 @@ using Nop.Services.Common;
 using Nop.Web.Framework.ClientsideFluentValidation;
 using Nop.Web.Framework.Mvc.ModelBinding.Binders;
 using Nop.Web.Framework.Mvc.Routing;
+using Nop.Web.Framework.RateLimiting;
 using Nop.Web.Framework.Security.Captcha;
 using Nop.Web.Framework.Themes;
 using Nop.Web.Framework.Validators;
@@ -120,24 +120,8 @@ public static class ServiceCollectionExtensions
         var commonConfig = Singleton<AppSettings>.Instance.Get<CommonConfig>();
 
         //add rate limiting if enabled and configured correctly
-        if (commonConfig.PermitLimit > 0)
-        {
-            builder.Services.AddRateLimiter(options =>
-            {
-                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-                    RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
-                        factory: partition => new FixedWindowRateLimiterOptions
-                        {
-                            AutoReplenishment = true,
-                            PermitLimit = commonConfig.PermitLimit,
-                            QueueLimit = commonConfig.QueueCount,
-                            Window = TimeSpan.FromMinutes(1)
-                        }));
-
-                options.RejectionStatusCode = commonConfig.RejectionStatusCode;
-            });
-        }
+        if (InboundRateLimiter.IsEnabled(commonConfig))
+            builder.Services.AddRateLimiter(options => InboundRateLimiter.Configure(options, commonConfig));
 
         engine.ConfigureServices(services, builder.Configuration);
     }

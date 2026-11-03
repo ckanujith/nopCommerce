@@ -67,7 +67,13 @@ public partial class CommonConfig : IConfig
     public int QueueCount { get; set; } = 0;
 
     /// <summary>
-    /// Default status code to set on the response when a request is rejected.
+    /// Default status code to set on the response when a request is rejected. A Retry-After header is always sent.
     /// </summary>
-    public int RejectionStatusCode { get; set; } = 503;
+    public int RejectionStatusCode { get; set; } = 429;
+
+    /// <summary>
+    /// Upper bound, in minutes, for the exponential penalty applied to a client that keeps exceeding the permit limit
+    /// in consecutive windows (1, 2, 4, 8 ... minutes). If set to 0, then there is no escalation. Admin area requests never escalate.
+    /// </summary>
+    public int MaxPenaltyMinutes { get; set; } = 30;
 }

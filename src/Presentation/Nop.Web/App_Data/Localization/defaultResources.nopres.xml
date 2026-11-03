@@ -5085,6 +5085,12 @@
   <LocaleResource Name="Admin.Configuration.AppSettings.Common.DisplayFullErrorStack.Hint">
     <Value>Enable this setting to display the full error in production environment. It's ignored (always enabled) in development environment.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.AppSettings.Common.MaxPenaltyMinutes">
+    <Value>Max penalty (minutes)</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.AppSettings.Common.MaxPenaltyMinutes.Hint">
+    <Value>Upper bound for the exponential penalty applied to a client that keeps exceeding the permit limit in consecutive windows (1, 2, 4, 8 ... minutes). If set to 0, then there is no escalation. Admin area requests never escalate.</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Configuration.AppSettings.Common.PermitLimit">
     <Value>Permit limit</Value>
   </LocaleResource>
@@ -5101,7 +5107,7 @@
     <Value>Rejection status code</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.AppSettings.Common.RejectionStatusCode.Hint">
-    <Value>Default status code to set on the response when a request is rejected.</Value>
+    <Value>Default status code to set on the response when a request is rejected. A Retry-After header is always sent.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.AppSettings.Common.ScheduleTaskRunTimeout">
     <Value>Schedule task run timeout</Value>
@@ -13125,6 +13131,21 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Dashboard.NumberOfPendingReturnRequests">
     <Value>Pending return requests</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity">
+    <Value>Rate limiting</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.Episodes">
+    <Value>{0} penalty episodes in the last 24 hours</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.Latest">
+    <Value>Latest ({0}):</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.None">
+    <Value>No rate limit penalties in the last 24 hours.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.ViewLog">
+    <Value>View in system log</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Documentation.Reference.Acl">
     <Value><![CDATA[Learn more about <a target="_blank" href="{0}">access control list</a>]]></Value>
