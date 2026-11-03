@@ -11,28 +11,15 @@ using Nop.Services.Logging;
 
 namespace Nop.Web.Framework.RateLimiting;
 
-/// <summary>
-/// The one way to turn on inbound rate limiting: registration, pipeline gating, partitioning, the rejection response
-/// and System Log reporting
-/// </summary>
 public static class InboundRateLimiter
 {
     internal static readonly MetadataName<PenaltyEpisode> EpisodeMetadata = new("nop.rate-limit.episode");
 
-    /// <summary>
-    /// Global cap on System Log rows written by this feature, to protect the database during distributed floods
-    /// </summary>
     private const int LOG_BUDGET_PER_MINUTE = 60;
     private const int LOG_BUDGET_BURST = 20;
 
     public static bool IsEnabled(CommonConfig config) => InboundRateLimitPolicy.FromConfig(config) is not null;
 
-    /// <summary>
-    /// Configure the rate limiter options: global limiter, rejection status code and rejection handler
-    /// </summary>
-    /// <param name="options">Rate limiter options</param>
-    /// <param name="config">Common config</param>
-    /// <param name="time">Clock used for penalties; null to use the system clock</param>
     public static void Configure(RateLimiterOptions options, CommonConfig config, TimeProvider time = null)
     {
         var policy = InboundRateLimitPolicy.FromConfig(config)
@@ -58,9 +45,6 @@ public static class InboundRateLimiter
     /// </summary>
     public static bool TryGetEpisode(RateLimitLease lease, out PenaltyEpisode episode) => lease.TryGetMetadata(EpisodeMetadata, out episode);
 
-    /// <remarks>
-    /// Never resolves IWorkContext: getting the current customer would create a guest customer for every rejected bot
-    /// </remarks>
     private static async ValueTask OnRejectedAsync(OnRejectedContext context, EpisodeLogBudget budget, CancellationToken cancellationToken)
     {
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var value) ? value : InboundRateLimitPolicy.DefaultWindow;
@@ -79,7 +63,6 @@ public static class InboundRateLimiter
             }
             catch
             {
-                //visibility is best-effort; a logging failure must not turn the rejection into a server error
             }
         }
 
@@ -97,21 +80,14 @@ public static class InboundRateLimiter
         if (address.AddressFamily != AddressFamily.InterNetworkV6)
             return address.ToString();
 
-        //one IPv6 subscriber usually owns a whole /64, so rotating addresses inside it must share a bucket
         var bytes = address.GetAddressBytes();
         Array.Clear(bytes, 8, 8);
 
         return $"{new IPAddress(bytes)}/64";
     }
 
-    /// <summary>
-    /// Partition key built from server-trusted inputs only: the remote IP after forwarded headers are applied, and the matched route
-    /// </summary>
     private readonly record struct ClientPartition(TrafficClass Traffic, string Client)
     {
-        /// <summary>
-        /// Storefront when the matched route has no admin area. API plugins and public controllers land here and use the exponential schedule. Admin area requests use the flat window.
-        /// </summary>
         public static ClientPartition From(HttpContext context)
         {
             var traffic = string.Equals(context.Request.RouteValues["area"] as string, AreaNames.ADMIN, StringComparison.OrdinalIgnoreCase)
@@ -122,9 +98,6 @@ public static class InboundRateLimiter
         }
     }
 
-    /// <summary>
-    /// Log write budget shared by all partitions. Suppressed episodes are counted into the next written row, not lost
-    /// </summary>
     private sealed class EpisodeLogBudget
     {
         private readonly TokenBucketRateLimiter _bucket;

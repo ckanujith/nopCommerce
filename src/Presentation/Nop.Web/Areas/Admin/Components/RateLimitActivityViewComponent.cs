@@ -12,23 +12,14 @@ using ILogger = Nop.Services.Logging.ILogger;
 
 namespace Nop.Web.Areas.Admin.Components;
 
-/// <summary>
-/// Represents a view component that displays inbound rate limit penalties of the last 24 hours
-/// </summary>
 public partial class RateLimitActivityViewComponent : NopViewComponent
 {
-    #region Fields
-
     protected readonly AppSettings _appSettings;
     protected readonly IDateTimeHelper _dateTimeHelper;
     protected readonly ILogger _logger;
     protected readonly IPermissionService _permissionService;
     protected readonly IStaticCacheManager _staticCacheManager;
     protected readonly IWorkContext _workContext;
-
-    #endregion
-
-    #region Ctor
 
     public RateLimitActivityViewComponent(AppSettings appSettings,
         IDateTimeHelper dateTimeHelper,
@@ -45,17 +36,6 @@ public partial class RateLimitActivityViewComponent : NopViewComponent
         _workContext = workContext;
     }
 
-    #endregion
-
-    #region Methods
-
-    /// <summary>
-    /// Invoke view component
-    /// </summary>
-    /// <returns>
-    /// A task that represents the asynchronous operation
-    /// The task result contains the view component result
-    /// </returns>
     public async Task<IViewComponentResult> InvokeAsync()
     {
         if (!InboundRateLimiter.IsEnabled(_appSettings.Get<CommonConfig>()))
@@ -64,7 +44,6 @@ public partial class RateLimitActivityViewComponent : NopViewComponent
         if (!await _permissionService.AuthorizeAsync(StandardPermission.System.MANAGE_SYSTEM_LOG))
             return Content(string.Empty);
 
-        //a vendor doesn't have access to this report
         if (await _workContext.GetCurrentVendorAsync() != null)
             return Content(string.Empty);
 
@@ -84,6 +63,4 @@ public partial class RateLimitActivityViewComponent : NopViewComponent
 
         return await ViewAsync(model);
     }
-
-    #endregion
 }

@@ -14,7 +14,6 @@ public class AppSettingsMigration : MigrationBase
         if (!DataSettingsManager.IsDatabaseInstalled())
             return;
 
-        //503 was the previous default; 429 is what tells a client that it, not the server, must back off
         var commonConfig = Singleton<AppSettings>.Instance.Get<CommonConfig>();
         if (commonConfig.RejectionStatusCode != 503)
             return;

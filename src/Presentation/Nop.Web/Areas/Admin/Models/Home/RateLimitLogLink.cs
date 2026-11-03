@@ -4,9 +4,6 @@ using Nop.Web.Framework.RateLimiting;
 
 namespace Nop.Web.Areas.Admin.Models.Home;
 
-/// <summary>
-/// Log-form projection of a <see cref="RateLimitLogQuery"/>.
-/// </summary>
 public readonly record struct RateLimitLogLink
 {
     public string Message { get; }
@@ -22,9 +19,6 @@ public readonly record struct RateLimitLogLink
         CreatedOnFrom = createdOnFrom;
     }
 
-    /// <summary>
-    /// User-local calendar date of <paramref name="query"/>, which is all the log date editor can store.
-    /// </summary>
     public static RateLimitLogLink From(RateLimitLogQuery query, TimeZoneInfo userZone)
     {
         var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(query.SinceUtc, DateTimeKind.Utc), userZone);
@@ -32,11 +26,6 @@ public readonly record struct RateLimitLogLink
         return new RateLimitLogLink(query.Message, (int)query.Level, local.Date);
     }
 
-    /// <summary>
-    /// Route values for the system log list. Keys are <see cref="LogSearchModel"/> property names.
-    /// <see cref="LogSearchModel.CreatedOnTo"/> is omitted because the window runs through the present,
-    /// and the log factory adds a day when that field is set.
-    /// </summary>
     public Dictionary<string, string> RouteValues()
     {
         return new Dictionary<string, string>

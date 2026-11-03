@@ -2,9 +2,6 @@ using System.Threading.RateLimiting;
 
 namespace Nop.Web.Framework.RateLimiting;
 
-/// <summary>
-/// One instance per partition (client and traffic class). Wraps a fixed window and is the sole writer of that client's standing
-/// </summary>
 /// <remarks>
 /// The partitioned limiter's heartbeat calls TryReplenish on replenishing partitions, which refills the window without a
 /// timer per client. It also disposes partitions idle for longer than its idle limit, so IdleDuration stays null until the
@@ -97,7 +94,6 @@ internal sealed class PenaltyBoxLimiter : ReplenishingRateLimiter
         var windowRetryAfter = windowLease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter) ? retryAfter : _schedule.Window;
         windowLease.Dispose();
 
-        //a concurrent request of the same client escalated first
         if (_standing.IsBlockedAt(now))
             return Absorb(now);
 
@@ -121,9 +117,6 @@ internal sealed class PenaltyBoxLimiter : ReplenishingRateLimiter
 
     protected override ValueTask DisposeAsyncCore() => _window.DisposeAsync();
 
-    /// <summary>
-    /// A rejected lease. Always carries RetryAfter; carries the episode only on the request that escalated
-    /// </summary>
     private sealed class PenaltyLease : RateLimitLease
     {
         private static readonly string[] _blockedMetadataNames = [MetadataName.RetryAfter.Name];

@@ -2,9 +2,6 @@ using Nop.Core.Domain.Logging;
 
 namespace Nop.Web.Framework.RateLimiting;
 
-/// <summary>
-/// The only dashboard window. It counts <see cref="RateLimitLog.Level"/> rows that match <see cref="RateLimitLog.MessageMarker"/>, for <see cref="Length"/> before a UTC clock.
-/// </summary>
 public readonly record struct RateLimitLogQuery
 {
     public static readonly TimeSpan Length = TimeSpan.FromHours(24);
@@ -22,9 +19,6 @@ public readonly record struct RateLimitLogQuery
         Message = RateLimitLog.MessageMarker;
     }
 
-    /// <summary>
-    /// The window the Home card counts and the log link opens.
-    /// </summary>
     /// <param name="utcNow">UTC clock. Any other <see cref="DateTimeKind"/> is rejected.</param>
     public static RateLimitLogQuery Dashboard(DateTime utcNow)
     {

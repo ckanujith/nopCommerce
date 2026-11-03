@@ -61,10 +61,6 @@ public class InboundRateLimiterTests
         }
     }
 
-    /// <summary>
-    /// Each block expires on the fake clock while the inner window stays exhausted on the real clock,
-    /// so every acquire after a block is a fresh violation
-    /// </summary>
     private async Task<List<(TimeSpan RetryAfter, PenaltyEpisode Episode)>> ViolateRepeatedlyAsync(HttpContext context, int violations)
     {
         var results = new List<(TimeSpan, PenaltyEpisode)>();

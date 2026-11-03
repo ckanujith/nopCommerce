@@ -3,16 +3,10 @@ using Nop.Core.Configuration;
 
 namespace Nop.Web.Framework.RateLimiting;
 
-/// <summary>
-/// Which bucket family a request belongs to. Decided from route values, never from headers
-/// </summary>
 public enum TrafficClass
 {
     Storefront = 0,
 
-    /// <summary>
-    /// Admin area requests. A separate bucket per client that never escalates
-    /// </summary>
     Admin = 1
 }
 
@@ -52,9 +46,6 @@ public sealed record PenaltySchedule
     }
 }
 
-/// <summary>
-/// Validated inbound rate limit policy. The only place the CommonConfig rate limit fields are read
-/// </summary>
 public sealed record InboundRateLimitPolicy
 {
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromMinutes(1);
@@ -80,8 +71,6 @@ public sealed record InboundRateLimitPolicy
     /// <returns>Null when the permit limit is not positive, meaning rate limiting is off</returns>
     public static InboundRateLimitPolicy FromConfig(CommonConfig config) => FromConfig(config, DefaultWindow);
 
-    /// <param name="config">Common config</param>
-    /// <param name="window">Length of the fixed window; production always uses <see cref="DefaultWindow"/></param>
     /// <returns>Null when the permit limit is not positive, meaning rate limiting is off</returns>
     public static InboundRateLimitPolicy FromConfig(CommonConfig config, TimeSpan window)
     {

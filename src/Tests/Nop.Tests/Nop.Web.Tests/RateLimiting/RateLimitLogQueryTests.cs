@@ -61,7 +61,6 @@ public class RateLimitLogQueryTests
         var configDefault = new CommonConfig().RejectionStatusCode;
         configDefault.Should().Be(StatusCodes.Status429TooManyRequests);
 
-        // The file is gitignored and created from CommonConfig on first run. A store that already has it must not keep a 503 override.
         var path = Path.Combine(RepoRoot(), "src", "Presentation", "Nop.Web", "App_Data", "appsettings.json");
         if (!File.Exists(path))
             return;

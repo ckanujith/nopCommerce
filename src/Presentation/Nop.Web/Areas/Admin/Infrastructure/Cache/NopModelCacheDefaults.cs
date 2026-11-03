@@ -32,8 +32,5 @@ public static partial class NopModelCacheDefaults
     /// </remarks>
     public static CacheKey SummernoteLanguageKey => new("Nop.pres.admin.summernote.language-{0}");
 
-    /// <summary>
-    /// Key for dashboard rate limit activity caching
-    /// </summary>
     public static CacheKey RateLimitActivityKey => new("Nop.pres.admin.ratelimit.activity") { CacheTime = 1 };
 }
