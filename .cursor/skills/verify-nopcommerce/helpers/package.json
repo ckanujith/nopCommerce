@@ -1,0 +1,10 @@
+{
+  "name": "verify-nopcommerce-helpers",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright helpers for verify-nopcommerce",
+  "dependencies": {
+    "playwright": "^1.64.1"
+  }
+}
