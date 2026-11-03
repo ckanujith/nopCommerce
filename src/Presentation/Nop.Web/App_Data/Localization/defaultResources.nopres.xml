@@ -13132,6 +13132,21 @@
   <LocaleResource Name="Admin.Dashboard.NumberOfPendingReturnRequests">
     <Value>Pending return requests</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity">
+    <Value>Rate limiting</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.Episodes">
+    <Value>{0} penalty episodes in the last 24 hours</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.Latest">
+    <Value>Latest ({0}):</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.None">
+    <Value>No rate limit penalties in the last 24 hours.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Dashboard.RateLimitActivity.ViewLog">
+    <Value>View in system log</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Documentation.Reference.Acl">
     <Value><![CDATA[Learn more about <a target="_blank" href="{0}">access control list</a>]]></Value>
   </LocaleResource>

@@ -1,0 +1,88 @@
+using Microsoft.AspNetCore.Mvc;
+using Nop.Core;
+using Nop.Core.Caching;
+using Nop.Core.Configuration;
+using Nop.Services.Helpers;
+using Nop.Services.Security;
+using Nop.Web.Areas.Admin.Infrastructure.Cache;
+using Nop.Web.Areas.Admin.Models.Home;
+using Nop.Web.Framework.Components;
+using Nop.Web.Framework.RateLimiting;
+using ILogger = Nop.Services.Logging.ILogger;
+
+namespace Nop.Web.Areas.Admin.Components;
+
+/// <summary>
+/// Represents a view component that displays inbound rate limit penalties of the last 24 hours
+/// </summary>
+public partial class RateLimitActivityViewComponent : NopViewComponent
+{
+    #region Fields
+
+    protected readonly AppSettings _appSettings;
+    protected readonly IDateTimeHelper _dateTimeHelper;
+    protected readonly ILogger _logger;
+    protected readonly IPermissionService _permissionService;
+    protected readonly IStaticCacheManager _staticCacheManager;
+    protected readonly IWorkContext _workContext;
+
+    #endregion
+
+    #region Ctor
+
+    public RateLimitActivityViewComponent(AppSettings appSettings,
+        IDateTimeHelper dateTimeHelper,
+        ILogger logger,
+        IPermissionService permissionService,
+        IStaticCacheManager staticCacheManager,
+        IWorkContext workContext)
+    {
+        _appSettings = appSettings;
+        _dateTimeHelper = dateTimeHelper;
+        _logger = logger;
+        _permissionService = permissionService;
+        _staticCacheManager = staticCacheManager;
+        _workContext = workContext;
+    }
+
+    #endregion
+
+    #region Methods
+
+    /// <summary>
+    /// Invoke view component
+    /// </summary>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the view component result
+    /// </returns>
+    public async Task<IViewComponentResult> InvokeAsync()
+    {
+        if (!InboundRateLimiter.IsEnabled(_appSettings.Get<CommonConfig>()))
+            return Content(string.Empty);
+
+        if (!await _permissionService.AuthorizeAsync(StandardPermission.System.MANAGE_SYSTEM_LOG))
+            return Content(string.Empty);
+
+        //a vendor doesn't have access to this report
+        if (await _workContext.GetCurrentVendorAsync() != null)
+            return Content(string.Empty);
+
+        var activity = await _staticCacheManager.GetAsync(NopModelCacheDefaults.RateLimitActivityKey,
+            () => RateLimitLog.ReadActivityAsync(_logger, DateTime.UtcNow.AddDays(-1)));
+
+        var model = new RateLimitActivityModel
+        {
+            EpisodeCount = activity.EpisodeCount,
+            LatestOn = activity.LatestOnUtc is DateTime latestOnUtc
+                ? await _dateTimeHelper.ConvertToUserTimeAsync(latestOnUtc, DateTimeKind.Utc)
+                : null,
+            LatestShortMessage = activity.LatestShortMessage,
+            LogFilter = RateLimitLog.MessageMarker
+        };
+
+        return await ViewAsync(model);
+    }
+
+    #endregion
+}

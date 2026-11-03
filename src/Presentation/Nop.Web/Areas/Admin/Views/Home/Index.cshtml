@@ -57,6 +57,14 @@
                             </div>
                         </div>
                     }
+                    @if (!Model.IsLoggedInAsVendor)
+                    {
+                        <div class="row">
+                            <div class="col-md-12">
+                                @await Component.InvokeAsync(typeof(RateLimitActivityViewComponent))
+                            </div>
+                        </div>
+                    }
                     @await Component.InvokeAsync(typeof(AdminWidgetViewComponent), new { widgetZone = AdminWidgetZones.DashboardCommonstatisticsAfter, additionalData = Model })
                     @if (!Model.IsLoggedInAsVendor && (canManageOrders || canManageCustomers))
                     {

@@ -1,0 +1,25 @@
+@model RateLimitActivityModel
+
+<div class="card card-primary card-outline" id="nopcommerce-rate-limit-activity-card">
+    <div class="card-header with-border clearfix">
+        <div class="card-title">
+            <i class="fas fa-shield-alt"></i>
+            @T("Admin.Dashboard.RateLimitActivity")
+        </div>
+    </div>
+    <div class="card-body">
+        @if (Model.EpisodeCount == 0)
+        {
+            <p>@T("Admin.Dashboard.RateLimitActivity.None")</p>
+        }
+        else
+        {
+            <p>@T("Admin.Dashboard.RateLimitActivity.Episodes", Model.EpisodeCount)</p>
+            <p>@T("Admin.Dashboard.RateLimitActivity.Latest", Model.LatestOn) @Model.LatestShortMessage</p>
+        }
+        <a asp-controller="Log" asp-action="List" asp-route-message="@Model.LogFilter">
+            @T("Admin.Dashboard.RateLimitActivity.ViewLog")
+            <i class="fas fa-arrow-circle-right"></i>
+        </a>
+    </div>
+</div>
