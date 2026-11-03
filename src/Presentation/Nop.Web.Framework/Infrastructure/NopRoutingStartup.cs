@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Nop.Core.Configuration;
 using Nop.Core.Infrastructure;
+using Nop.Web.Framework.RateLimiting;
 
 namespace Nop.Web.Framework.Infrastructure;
 
@@ -29,8 +30,7 @@ public partial class NopRoutingStartup : INopStartup
         //add the RoutingMiddleware
         application.UseRouting();
 
-        var commonConfig = Singleton<AppSettings>.Instance.Get<CommonConfig>();
-        if (commonConfig.PermitLimit > 0)
+        if (InboundRateLimiter.IsEnabled(Singleton<AppSettings>.Instance.Get<CommonConfig>()))
             application.UseRateLimiter();
     }
 
