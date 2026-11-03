@@ -69,16 +69,17 @@ public partial class RateLimitActivityViewComponent : NopViewComponent
             return Content(string.Empty);
 
         var activity = await _staticCacheManager.GetAsync(NopModelCacheDefaults.RateLimitActivityKey,
-            () => RateLimitLog.ReadActivityAsync(_logger, DateTime.UtcNow.AddDays(-1)));
+            () => RateLimitLog.ReadActivityAsync(_logger, RateLimitLogQuery.Dashboard(DateTime.UtcNow)));
 
+        var zone = await _dateTimeHelper.GetCurrentTimeZoneAsync();
         var model = new RateLimitActivityModel
         {
             EpisodeCount = activity.EpisodeCount,
-            LatestOn = activity.LatestOnUtc is DateTime latestOnUtc
-                ? await _dateTimeHelper.ConvertToUserTimeAsync(latestOnUtc, DateTimeKind.Utc)
+            LatestOn = activity.LatestOnUtc is DateTime latest
+                ? await _dateTimeHelper.ConvertToUserTimeAsync(latest, DateTimeKind.Utc)
                 : null,
             LatestShortMessage = activity.LatestShortMessage,
-            LogFilter = RateLimitLog.MessageMarker
+            LogLink = RateLimitLogLink.From(activity.Query, zone)
         };
 
         return await ViewAsync(model);

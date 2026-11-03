@@ -15,7 +15,7 @@ public partial record RateLimitActivityModel : BaseNopModel
 
     public string LatestShortMessage { get; set; }
 
-    public string LogFilter { get; set; }
+    public RateLimitLogLink LogLink { get; set; }
 
     #endregion
 }

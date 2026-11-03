@@ -92,7 +92,7 @@ public class RateLimitingMiddlewareTests : BaseNopTest
         retryAfters.Should().Equal("60", "120", "240");
 
         var logger = GetService<ILogger>();
-        var activity = await RateLimitLog.ReadActivityAsync(logger, since);
+        var activity = await RateLimitLog.ReadActivityAsync(logger, RateLimitLogQuery.Dashboard(DateTime.UtcNow));
         activity.EpisodeCount.Should().Be(3);
         activity.LatestShortMessage.Should().StartWith(RateLimitLog.MessageMarker);
 

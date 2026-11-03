@@ -17,7 +17,7 @@
             <p>@T("Admin.Dashboard.RateLimitActivity.Episodes", Model.EpisodeCount)</p>
             <p>@T("Admin.Dashboard.RateLimitActivity.Latest", Model.LatestOn) @Model.LatestShortMessage</p>
         }
-        <a asp-controller="Log" asp-action="List" asp-route-message="@Model.LogFilter">
+        <a asp-controller="Log" asp-action="List" asp-all-route-data="@Model.LogLink.RouteValues()">
             @T("Admin.Dashboard.RateLimitActivity.ViewLog")
             <i class="fas fa-arrow-circle-right"></i>
         </a>

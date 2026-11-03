@@ -51,10 +51,10 @@ public partial class LogController : BaseAdminController
     }
 
     [CheckPermission(StandardPermission.System.MANAGE_SYSTEM_LOG)]
-    public virtual async Task<IActionResult> List(string message = null)
+    public virtual async Task<IActionResult> List([FromQuery] LogSearchModel searchModel)
     {
         //prepare model
-        var model = await _logModelFactory.PrepareLogSearchModelAsync(new LogSearchModel { Message = message });
+        var model = await _logModelFactory.PrepareLogSearchModelAsync(searchModel);
 
         return View(model);
     }

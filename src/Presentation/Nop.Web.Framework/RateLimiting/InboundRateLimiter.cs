@@ -109,6 +109,9 @@ public static class InboundRateLimiter
     /// </summary>
     private readonly record struct ClientPartition(TrafficClass Traffic, string Client)
     {
+        /// <summary>
+        /// Storefront when the matched route has no admin area. API plugins and public controllers land here and use the exponential schedule. Admin area requests use the flat window.
+        /// </summary>
         public static ClientPartition From(HttpContext context)
         {
             var traffic = string.Equals(context.Request.RouteValues["area"] as string, AreaNames.ADMIN, StringComparison.OrdinalIgnoreCase)
