@@ -3357,6 +3357,12 @@
   <LocaleResource Name="Admin.Catalog.Products.Fields.DisableBuyButton.Hint">
     <Value>Check to disable the buy button for this product. This may be necessary for products that are 'available upon request'.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Catalog.Products.Fields.DisableRewardPointsRedemption">
+    <Value>Disable purchasing with reward points</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Catalog.Products.Fields.DisableRewardPointsRedemption.Hint">
+    <Value>Check to prevent customers from redeeming reward points on orders that include this product.</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Catalog.Products.Fields.DisableWishlistButton">
     <Value>Disable wishlist button</Value>
   </LocaleResource>
@@ -9256,6 +9262,9 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Settings.ProductEditor.DisableBuyButton">
     <Value>Disable buy button</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Settings.ProductEditor.DisableRewardPointsRedemption">
+    <Value>Disable purchasing with reward points</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Settings.ProductEditor.DisableWishlistButton">
     <Value>Disable wishlist button</Value>

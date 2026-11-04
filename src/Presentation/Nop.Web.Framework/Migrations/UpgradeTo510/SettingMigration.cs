@@ -1,6 +1,8 @@
 ﻿using FluentMigrator;
+using Nop.Core.Domain.Catalog;
 using Nop.Data;
 using Nop.Data.Migrations;
+using Nop.Web.Framework.Extensions;
 
 namespace Nop.Web.Framework.Migrations.UpgradeTo510;
 
@@ -12,6 +14,9 @@ public class SettingMigration : MigrationBase
     {
         if (!DataSettingsManager.IsDatabaseInstalled())
             return;
+
+        //#2049
+        this.SetSettingIfNotExists<ProductEditorSettings, bool>(settings => settings.DisableRewardPointsRedemption, false);
     }
 
     public override void Down()

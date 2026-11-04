@@ -309,6 +309,9 @@ public partial record ProductModel : BaseNopEntityModel,
     [NopResourceDisplayName("Admin.Catalog.Products.Fields.DisableBuyButton")]
     public bool DisableBuyButton { get; set; }
 
+    [NopResourceDisplayName("Admin.Catalog.Products.Fields.DisableRewardPointsRedemption")]
+    public bool DisableRewardPointsRedemption { get; set; }
+
     [NopResourceDisplayName("Admin.Catalog.Products.Fields.DisableWishlistButton")]
     public bool DisableWishlistButton { get; set; }
 

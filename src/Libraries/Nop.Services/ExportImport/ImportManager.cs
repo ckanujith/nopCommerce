@@ -2512,6 +2512,9 @@ public partial class ImportManager : IImportManager
                     case "DisableBuyButton":
                         product.DisableBuyButton = property.BooleanValue;
                         break;
+                    case "DisableRewardPointsRedemption":
+                        product.DisableRewardPointsRedemption = property.BooleanValue;
+                        break;
                     case "DisableWishlistButton":
                         product.DisableWishlistButton = property.BooleanValue;
                         break;

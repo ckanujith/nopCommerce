@@ -1405,8 +1405,11 @@ public partial class OrderTotalCalculationService : IOrderTotalCalculationServic
 
         var orderTotal = resultTemp;
 
-        //reward points
-        (redeemedRewardPoints, redeemedRewardPointsAmount) = await SetRewardPointsAsync(redeemedRewardPoints, redeemedRewardPointsAmount, useRewardPoints, customer, orderTotal);
+        //reward points (blocked when any cart product disables redemption)
+        if (!await _shoppingCartService.ShoppingCartIsRewardPointsRedemptionDisabledAsync(cart))
+        {
+            (redeemedRewardPoints, redeemedRewardPointsAmount) = await SetRewardPointsAsync(redeemedRewardPoints, redeemedRewardPointsAmount, useRewardPoints, customer, orderTotal);
+        }
 
         orderTotal -= redeemedRewardPointsAmount;
 

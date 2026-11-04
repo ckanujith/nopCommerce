@@ -182,6 +182,27 @@ public class CheckoutModelFactoryTests : ServiceTest
     }
 
     [Test]
+    public async Task PreparePaymentMethodModelShouldHideRewardPointsWhenProductDisablesRedemption()
+    {
+        var product = await _productService.GetProductByIdAsync(_cart.First().ProductId);
+        product.DisableRewardPointsRedemption = true;
+        await _productService.UpdateProductAsync(product);
+
+        try
+        {
+            (await _shoppingCartService.ShoppingCartIsRewardPointsRedemptionDisabledAsync(_cart)).Should().BeTrue();
+
+            var model = await GetService<ICheckoutModelFactory>().PreparePaymentMethodModelAsync(_cart, 0);
+            model.DisplayRewardPoints.Should().BeFalse();
+        }
+        finally
+        {
+            product.DisableRewardPointsRedemption = false;
+            await _productService.UpdateProductAsync(product);
+        }
+    }
+
+    [Test]
     public async Task CanPreparePaymentInfoModel()
     {
         var model = await _checkoutModelFactory.PreparePaymentInfoModelAsync(_paymentMethod);

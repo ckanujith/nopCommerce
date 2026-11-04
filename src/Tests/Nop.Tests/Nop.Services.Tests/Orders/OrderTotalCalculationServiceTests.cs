@@ -711,6 +711,38 @@ public class OrderTotalCalculationServiceTests : ServiceTest
     }
 
     [Test]
+    public async Task ShouldNotRedeemRewardPointsWhenProductDisablesRedemption()
+    {
+        _rewardPointsSettings.Enabled = true;
+        _rewardPointsSettings.MinimumRewardPointsToUse = 0;
+        await _settingService.SaveSettingAsync(_rewardPointsSettings);
+
+        var rewardPointService = GetService<IRewardPointService>();
+        await rewardPointService.AddRewardPointsHistoryEntryAsync(_customer, 10000, _store.Id);
+
+        var product = await _productService.GetProductBySkuAsync("FR_451_RB");
+        product.DisableRewardPointsRedemption = true;
+        await _productService.UpdateProductAsync(product);
+
+        try
+        {
+            var (_, _, _, _, redeemedRewardPoints, redeemedRewardPointsAmount) =
+                await _orderTotalCalcService.GetShoppingCartTotalAsync(await GetShoppingCartAsync(), true);
+
+            redeemedRewardPoints.Should().Be(0);
+            redeemedRewardPointsAmount.Should().Be(0);
+        }
+        finally
+        {
+            product.DisableRewardPointsRedemption = false;
+            await _productService.UpdateProductAsync(product);
+
+            foreach (var history in await rewardPointService.GetRewardPointsHistoryAsync(_customer.Id))
+                await rewardPointService.DeleteRewardPointsHistoryEntryAsync(history);
+        }
+    }
+
+    [Test]
     public async Task CanCheckMinimumRewardPointsToUseRequirement()
     {
         _rewardPointsSettings.Enabled = true;

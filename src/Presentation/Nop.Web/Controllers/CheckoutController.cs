@@ -1126,8 +1126,10 @@ public partial class CheckoutController : BasePublicController
         //reward points
         if (_rewardPointsSettings.Enabled)
         {
+            var useRewardPoints = model.UseRewardPoints
+                && !await _shoppingCartService.ShoppingCartIsRewardPointsRedemptionDisabledAsync(cart);
             await _genericAttributeService.SaveAttributeAsync(customer,
-                NopCustomerDefaults.UseRewardPointsDuringCheckoutAttribute, model.UseRewardPoints,
+                NopCustomerDefaults.UseRewardPointsDuringCheckoutAttribute, useRewardPoints,
                 store.Id);
         }
 
@@ -1905,8 +1907,10 @@ public partial class CheckoutController : BasePublicController
             //reward points
             if (_rewardPointsSettings.Enabled)
             {
+                var useRewardPoints = model.UseRewardPoints
+                    && !await _shoppingCartService.ShoppingCartIsRewardPointsRedemptionDisabledAsync(cart);
                 await _genericAttributeService.SaveAttributeAsync(customer,
-                    NopCustomerDefaults.UseRewardPointsDuringCheckoutAttribute, model.UseRewardPoints,
+                    NopCustomerDefaults.UseRewardPointsDuringCheckoutAttribute, useRewardPoints,
                     store.Id);
             }
 
