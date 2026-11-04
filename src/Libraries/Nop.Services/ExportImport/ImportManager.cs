@@ -3216,6 +3216,11 @@ public partial class ImportManager : IImportManager
 
         var manager = new PropertyManager<Discount>(defaultProperties, _catalogSettings);
 
+        //export writes these columns as dropdown names when related entities are exported by name;
+        //without the lists, IntValue cannot parse the name and both ids stay 0
+        manager.SetSelectList("DiscountType", await DiscountType.AssignedToOrderTotal.ToSelectListAsync(useLocalization: false));
+        manager.SetSelectList("DiscountLimitation", await DiscountLimitationType.Unlimited.ToSelectListAsync(useLocalization: false));
+
         var currentVendor = await _workContext.GetCurrentVendorAsync();
         var iRow = 2;
 
