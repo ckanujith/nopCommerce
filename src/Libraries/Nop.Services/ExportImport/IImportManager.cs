@@ -41,6 +41,13 @@ public partial interface IImportManager
     Task ImportManufacturersFromXlsxAsync(Stream stream);
 
     /// <summary>
+    /// Import discounts from XLSX file
+    /// </summary>
+    /// <param name="stream">Stream</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    Task ImportDiscountsFromXlsxAsync(Stream stream);
+
+    /// <summary>
     /// Import categories from XLSX file
     /// </summary>
     /// <param name="stream">Stream</param>

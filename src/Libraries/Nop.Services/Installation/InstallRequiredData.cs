@@ -3202,6 +3202,11 @@ public partial class InstallationService
                     Name = "Manufacturers were imported"
                 },
                 new() {
+                    SystemKeyword = "ImportDiscounts",
+                    Enabled = true,
+                    Name = "Discounts were imported"
+                },
+                new() {
                     SystemKeyword = "ImportPriceLists",
                     Enabled = true,
                     Name = "Import price lists"
@@ -3245,6 +3250,11 @@ public partial class InstallationService
                     SystemKeyword = "ExportManufacturers",
                     Enabled = true,
                     Name = "Manufacturers were exported"
+                },
+                new() {
+                    SystemKeyword = "ExportDiscounts",
+                    Enabled = true,
+                    Name = "Discounts were exported"
                 },
                 new() {
                     SystemKeyword = "ExportPriceLists",
