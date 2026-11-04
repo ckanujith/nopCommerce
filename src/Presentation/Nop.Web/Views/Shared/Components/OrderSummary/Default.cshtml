@@ -66,6 +66,13 @@
                     {
                         <button type="submit" name="updatecart" id="updatecart" class="button-2 update-cart-button" style="display: none;">@T("ShoppingCart.UpdateCart")</button>
                         <button type="submit" name="continueshopping" class="button-2 continue-shopping-button">@T("ShoppingCart.ContinueShopping")</button>
+                        @if (Model.ShowClearCartButton)
+                        {
+                            <button type="submit" name="clearcart" id="clearcart" class="button-2 clear-cart-button"
+                                    onclick="return confirm('@JavaScriptEncoder.Default.Encode(T("ShoppingCart.ClearCart.Confirm").Text)');">
+                                @T("ShoppingCart.ClearCart")
+                            </button>
+                        }
                         @await Component.InvokeAsync(typeof(ShoppingCartEstimateShippingViewComponent))
                     }
                 </div>

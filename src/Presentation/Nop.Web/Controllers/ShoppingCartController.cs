@@ -1372,6 +1372,33 @@ public partial class ShoppingCartController : BasePublicController
         return RedirectToRoute(NopRouteNames.General.HOMEPAGE);
     }
 
+    //NOPCOM-SDLC-20261104-001
+    [HttpPost, ActionName("Cart")]
+    [FormValueRequired("clearcart")]
+    public virtual async Task<IActionResult> ClearCart()
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermission.PublicStore.ENABLE_SHOPPING_CART))
+            return RedirectToRoute(NopRouteNames.General.HOMEPAGE);
+
+        if (!_shoppingCartSettings.ShowClearCartButton)
+            return RedirectToRoute(NopRouteNames.General.CART);
+
+        var customer = await _workContext.GetCurrentCustomerAsync();
+        var store = await _storeContext.GetCurrentStoreAsync();
+        var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+        if (!cart.Any())
+            return RedirectToRoute(NopRouteNames.General.CART);
+
+        await _shoppingCartService.ResetCheckoutDataAsync(customer, store.Id,
+            clearCouponCodes: true, clearCheckoutAttributes: true);
+        if (_shoppingCartSettings.VendorEnabled)
+            await _shoppingCartService.SetShoppingCartVendorAsync(customer, null, store.Id);
+
+        await _shoppingCartService.ClearShoppingCartAsync(customer, store.Id);
+
+        return RedirectToRoute(NopRouteNames.General.CART);
+    }
+
     [HttpPost, ActionName("Cart")]
     [FormValueRequired("checkout")]
     public virtual async Task<IActionResult> StartCheckout(IFormCollection form)

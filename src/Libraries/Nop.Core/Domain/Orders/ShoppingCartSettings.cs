@@ -73,6 +73,11 @@ public partial class ShoppingCartSettings : ISettings
     public bool ShowGiftCardBox { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to show the "Clear cart" button on the shopping cart page
+    /// </summary>
+    public bool ShowClearCartButton { get; set; }
+
+    /// <summary>
     /// Gets or sets a number of "Cross-sells" on shopping cart page
     /// </summary>
     public int CrossSellsNumber { get; set; }

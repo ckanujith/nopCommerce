@@ -1843,6 +1843,7 @@ public partial class InstallationService
             ShowProductImagesOnWishList = true,
             ShowDiscountBox = true,
             ShowGiftCardBox = true,
+            ShowClearCartButton = true,
             CrossSellsNumber = 4,
             EmailWishlistEnabled = true,
             AllowAnonymousUsersToEmailWishlist = false,
