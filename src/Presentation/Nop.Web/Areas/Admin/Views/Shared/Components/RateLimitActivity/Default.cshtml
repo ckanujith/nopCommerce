@@ -2,24 +2,23 @@
 
 <div class="card card-primary card-outline" id="nopcommerce-rate-limit-activity-card">
     <div class="card-header with-border clearfix">
-        <div class="card-title">
+        <h3 class="card-title">
             <i class="fas fa-shield-alt"></i>
             @T("Admin.Dashboard.RateLimitActivity")
-        </div>
+            <a asp-controller="Log" asp-action="List" asp-all-route-data="@Model.LogLink.RouteValues()" class="btn btn-xs btn-info btn-flat margin-l-10">
+                @T("Admin.Dashboard.RateLimitActivity.ViewLog")
+            </a>
+        </h3>
     </div>
     <div class="card-body">
         @if (Model.EpisodeCount == 0)
         {
-            <p>@T("Admin.Dashboard.RateLimitActivity.None")</p>
+            <p class="text-muted">@T("Admin.Dashboard.RateLimitActivity.None")</p>
         }
         else
         {
             <p>@T("Admin.Dashboard.RateLimitActivity.Episodes", Model.EpisodeCount)</p>
-            <p>@T("Admin.Dashboard.RateLimitActivity.Latest", Model.LatestOn) @Model.LatestShortMessage</p>
+            <p class="text-muted">@T("Admin.Dashboard.RateLimitActivity.Latest", Model.LatestOn) @Model.LatestShortMessage</p>
         }
-        <a asp-controller="Log" asp-action="List" asp-all-route-data="@Model.LogLink.RouteValues()">
-            @T("Admin.Dashboard.RateLimitActivity.ViewLog")
-            <i class="fas fa-arrow-circle-right"></i>
-        </a>
     </div>
 </div>
