@@ -148,7 +148,7 @@ public class ImportManagerDiscountTests
             sheet.Cell(3, 4).GetText().Should().Be(CommonHelper.SplitCamelCaseWord(nameof(DiscountLimitationType.NTimesPerCustomer)));
         }
 
-        var inserted = await ImportAsync(workbook, new CatalogSettings { ExportImportRelatedEntitiesByName = true }, existing);
+        var inserted = await ImportAsync(workbook, new CatalogSettings { ExportImportRelatedEntitiesByName = true }, existingDiscounts: [existing]);
 
         existing.DiscountType.Should().Be(DiscountType.AssignedToCategories);
         existing.DiscountLimitation.Should().Be(DiscountLimitationType.NTimesOnly);
@@ -189,6 +189,139 @@ public class ImportManagerDiscountTests
         inserted[0].DiscountLimitation.Should().Be(DiscountLimitationType.NTimesOnly);
     }
 
+    [Test]
+    public async Task ImportForcesSkuDiscountTypeForVendorCallers()
+    {
+        var vendor = new Vendor { Id = 15, Name = "Acme" };
+        var storeWideTypes = new[]
+        {
+            DiscountType.AssignedToOrderTotal,
+            DiscountType.AssignedToOrderSubTotal,
+            DiscountType.AssignedToShipping,
+            DiscountType.AssignedToCategories,
+            DiscountType.AssignedToManufacturers
+        };
+
+        foreach (var exportRelatedEntitiesByName in new[] { true, false })
+        {
+            var settings = new CatalogSettings { ExportImportRelatedEntitiesByName = exportRelatedEntitiesByName };
+            var vendorOwned = CreateVendorDiscount(8, vendor.Id, "Vendor sku");
+            var otherVendorOwned = CreateVendorDiscount(21, vendorId: 99, "Other vendor");
+            var workbook = await ExportVendorDiscountAttackAsync(settings, vendorOwned.Id, otherVendorOwned.Id, storeWideTypes);
+
+            var adminExisting = CreateVendorDiscount(vendorOwned.Id, vendor.Id, vendorOwned.Name);
+            var adminOther = CreateVendorDiscount(otherVendorOwned.Id, otherVendorOwned.VendorId!.Value, otherVendorOwned.Name);
+            var adminInserted = await ImportAsync(workbook, settings, null, adminExisting, adminOther);
+
+            adminInserted.Should().HaveCount(storeWideTypes.Length + 1);
+            adminInserted.Select(discount => discount.DiscountType).Should().Equal(storeWideTypes.Append(DiscountType.AssignedToSkus));
+            adminInserted.Should().OnlyContain(discount => discount.VendorId == 999 && discount.DiscountPercentage == 100m && !discount.RequiresCouponCode);
+            adminExisting.DiscountType.Should().Be(DiscountType.AssignedToOrderTotal);
+            adminExisting.VendorId.Should().Be(999);
+            adminExisting.DiscountPercentage.Should().Be(100m);
+            adminOther.Name.Should().Be("Stolen discount");
+            adminOther.DiscountType.Should().Be(DiscountType.AssignedToOrderTotal);
+
+            var vendorInserted = await ImportAsync(workbook, settings, vendor, vendorOwned, otherVendorOwned);
+
+            vendorInserted.Should().HaveCount(storeWideTypes.Length + 1);
+            vendorInserted.Should().OnlyContain(discount =>
+                discount.DiscountType == DiscountType.AssignedToSkus &&
+                discount.VendorId == vendor.Id &&
+                discount.UsePercentage &&
+                discount.DiscountPercentage == 100m &&
+                !discount.RequiresCouponCode &&
+                discount.IsActive);
+
+            vendorOwned.DiscountType.Should().Be(DiscountType.AssignedToSkus);
+            vendorOwned.VendorId.Should().Be(vendor.Id);
+            vendorOwned.Name.Should().Be("Renamed vendor discount");
+            vendorOwned.DiscountPercentage.Should().Be(100m);
+
+            otherVendorOwned.Name.Should().Be("Other vendor");
+            otherVendorOwned.DiscountType.Should().Be(DiscountType.AssignedToSkus);
+            otherVendorOwned.VendorId.Should().Be(99);
+            otherVendorOwned.DiscountPercentage.Should().Be(5m);
+        }
+    }
+
+    private static Discount CreateVendorDiscount(int id, int vendorId, string name)
+    {
+        return new Discount
+        {
+            Id = id,
+            Name = name,
+            VendorId = vendorId,
+            DiscountType = DiscountType.AssignedToSkus,
+            UsePercentage = true,
+            DiscountPercentage = 5m,
+            IsActive = true
+        };
+    }
+
+    private static async Task<byte[]> ExportVendorDiscountAttackAsync(CatalogSettings settings, int vendorDiscountId, int otherVendorDiscountId, IReadOnlyList<DiscountType> storeWideTypes)
+    {
+        var rows = storeWideTypes.Select(type => new Discount
+        {
+            Name = $"Store wide {type}",
+            DiscountType = type,
+            UsePercentage = true,
+            DiscountPercentage = 100m,
+            RequiresCouponCode = false,
+            IsActive = true,
+            VendorId = 999
+        }).ToList();
+
+        rows.Add(new Discount
+        {
+            Name = "Legitimate sku",
+            DiscountType = DiscountType.AssignedToSkus,
+            UsePercentage = true,
+            DiscountPercentage = 100m,
+            RequiresCouponCode = false,
+            IsActive = true,
+            VendorId = 999
+        });
+
+        rows.Add(new Discount
+        {
+            Id = vendorDiscountId,
+            Name = "Renamed vendor discount",
+            DiscountType = DiscountType.AssignedToOrderTotal,
+            UsePercentage = true,
+            DiscountPercentage = 100m,
+            RequiresCouponCode = false,
+            IsActive = true,
+            VendorId = 999
+        });
+
+        rows.Add(new Discount
+        {
+            Id = otherVendorDiscountId,
+            Name = "Stolen discount",
+            DiscountType = DiscountType.AssignedToOrderTotal,
+            UsePercentage = true,
+            DiscountPercentage = 100m,
+            RequiresCouponCode = false,
+            IsActive = true,
+            VendorId = 15
+        });
+
+        return await new PropertyManager<Discount>([
+            new PropertyByName<Discount>("Id", (discount, _) => discount.Id),
+            new PropertyByName<Discount>("Name", (discount, _) => discount.Name),
+            new PropertyByName<Discount>("DiscountType", (discount, _) => discount.DiscountTypeId)
+            {
+                DropDownElements = EnumSelectList<DiscountType>()
+            },
+            new PropertyByName<Discount>("UsePercentage", (discount, _) => discount.UsePercentage),
+            new PropertyByName<Discount>("DiscountPercentage", (discount, _) => discount.DiscountPercentage),
+            new PropertyByName<Discount>("RequiresCouponCode", (discount, _) => discount.RequiresCouponCode),
+            new PropertyByName<Discount>("IsActive", (discount, _) => discount.IsActive),
+            new PropertyByName<Discount>("VendorId", (discount, _) => discount.VendorId)
+        ], settings).ExportToXlsxAsync(rows);
+    }
+
     private static async Task<byte[]> ExportDiscountsAsync(bool exportRelatedEntitiesByName, params Discount[] discounts)
     {
         var settings = new CatalogSettings { ExportImportRelatedEntitiesByName = exportRelatedEntitiesByName };
@@ -219,7 +352,7 @@ public class ImportManagerDiscountTests
         return new SelectList(values, "ID", "Name");
     }
 
-    private static async Task<List<Discount>> ImportAsync(byte[] workbook, CatalogSettings catalogSettings, params Discount[] existingDiscounts)
+    private static async Task<List<Discount>> ImportAsync(byte[] workbook, CatalogSettings catalogSettings, Vendor currentVendor = null, params Discount[] existingDiscounts)
     {
         var stored = existingDiscounts.ToDictionary(discount => discount.Id);
         var inserted = new List<Discount>();
@@ -254,7 +387,7 @@ public class ImportManagerDiscountTests
         var workContext = new Mock<IWorkContext>();
         workContext
             .Setup(context => context.GetCurrentVendorAsync())
-            .ReturnsAsync((Vendor)null);
+            .ReturnsAsync(currentVendor);
 
         var importManager = CreateImportManager(
             discountService.Object,

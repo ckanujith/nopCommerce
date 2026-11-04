@@ -3319,6 +3319,11 @@ public partial class ImportManager : IImportManager
                 }
             }
 
+            //vendors may only own SKU discounts. Order total, order subtotal, shipping, category,
+            //and manufacturer discounts apply store-wide; checkout loads them without filtering VendorId.
+            if (currentVendor != null)
+                discount.DiscountType = DiscountType.AssignedToSkus;
+
             if (isNew)
                 await _discountService.InsertDiscountAsync(discount);
             else

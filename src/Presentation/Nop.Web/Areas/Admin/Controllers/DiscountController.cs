@@ -137,7 +137,11 @@ public partial class DiscountController : BaseAdminController
         {
             var currentVendor = await _workContext.GetCurrentVendorAsync();
             if (currentVendor != null)
+            {
                 model.VendorId = currentVendor.Id;
+                //the form hides the type selector; enforce it here so a posted value cannot create a store-wide discount
+                model.DiscountTypeId = (int)DiscountType.AssignedToSkus;
+            }
 
             var discount = model.ToEntity<Discount>();
             await _discountService.InsertDiscountAsync(discount);
@@ -196,6 +200,13 @@ public partial class DiscountController : BaseAdminController
 
         if (ModelState.IsValid)
         {
+            if (currentVendor != null)
+            {
+                model.VendorId = currentVendor.Id;
+                //the form hides the type selector; enforce it here so a posted value cannot widen this discount
+                model.DiscountTypeId = (int)DiscountType.AssignedToSkus;
+            }
+
             var prevDiscountType = discount.DiscountType;
             discount = model.ToEntity(discount);
             await _discountService.UpdateDiscountAsync(discount);
