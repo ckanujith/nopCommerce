@@ -60,6 +60,9 @@ public partial record ProductEditorSettingsModel : BaseNopModel, ISettingsModel
     [NopResourceDisplayName("Admin.Configuration.Settings.ProductEditor.DisableBuyButton")]
     public bool DisableBuyButton { get; set; }
 
+    [NopResourceDisplayName("Admin.Configuration.Settings.ProductEditor.DisableRewardPointsRedemption")]
+    public bool DisableRewardPointsRedemption { get; set; }
+
     [NopResourceDisplayName("Admin.Configuration.Settings.ProductEditor.DisableWishlistButton")]
     public bool DisableWishlistButton { get; set; }
 

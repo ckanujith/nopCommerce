@@ -376,6 +376,11 @@ public partial class Product : BaseEntity, ILocalizedEntity, ISlugSupported, IAc
     public bool DisableBuyButton { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether reward points cannot be redeemed toward an order that includes this product
+    /// </summary>
+    public bool DisableRewardPointsRedemption { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether to disable "Add to wishlist" button
     /// </summary>
     public bool DisableWishlistButton { get; set; }

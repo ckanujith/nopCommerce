@@ -2041,6 +2041,24 @@ public partial class ShoppingCartService : IShoppingCartService
     }
 
     /// <summary>
+    /// Gets a value indicating whether reward points redemption is disabled for the shopping cart
+    /// </summary>
+    /// <param name="shoppingCart">Shopping cart</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the result
+    /// </returns>
+    public virtual async Task<bool> ShoppingCartIsRewardPointsRedemptionDisabledAsync(IList<ShoppingCartItem> shoppingCart)
+    {
+        ArgumentNullException.ThrowIfNull(shoppingCart);
+
+        if (!shoppingCart.Any())
+            return false;
+
+        return await _productService.HasAnyProductWithDisabledRewardPointsRedemptionAsync(shoppingCart.Select(sci => sci.ProductId).ToArray());
+    }
+
+    /// <summary>
     /// Get a recurring cycle information
     /// </summary>
     /// <param name="shoppingCart">Shopping cart</param>

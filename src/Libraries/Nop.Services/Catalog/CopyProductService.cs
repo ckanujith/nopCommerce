@@ -752,6 +752,7 @@ public partial class CopyProductService : ICopyProductService
             AllowAddingOnlyExistingAttributeCombinations = product.AllowAddingOnlyExistingAttributeCombinations,
             NotReturnable = product.NotReturnable,
             DisableBuyButton = product.DisableBuyButton,
+            DisableRewardPointsRedemption = product.DisableRewardPointsRedemption,
             DisableWishlistButton = product.DisableWishlistButton,
             AvailableForPreOrder = product.AvailableForPreOrder,
             PreOrderAvailabilityStartDateTimeUtc = product.PreOrderAvailabilityStartDateTimeUtc,

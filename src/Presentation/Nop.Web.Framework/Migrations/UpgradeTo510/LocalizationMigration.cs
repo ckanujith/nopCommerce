@@ -36,7 +36,10 @@ public class LocalizationMigration : MigrationBase
 
         this.AddOrUpdateLocaleResource(new Dictionary<string, string>
         {
-            
+            //#2049
+            ["Admin.Catalog.Products.Fields.DisableRewardPointsRedemption"] = "Disable purchasing with reward points",
+            ["Admin.Catalog.Products.Fields.DisableRewardPointsRedemption.Hint"] = "Check to prevent customers from redeeming reward points on orders that include this product.",
+            ["Admin.Configuration.Settings.ProductEditor.DisableRewardPointsRedemption"] = "Disable purchasing with reward points",
         });
 
         #endregion

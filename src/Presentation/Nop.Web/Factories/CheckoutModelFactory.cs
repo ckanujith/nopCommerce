@@ -509,7 +509,9 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
         var store = await _storeContext.GetCurrentStoreAsync();
 
         //reward points
-        if (_rewardPointsSettings.Enabled && !await _shoppingCartService.ShoppingCartIsRecurringAsync(cart))
+        if (_rewardPointsSettings.Enabled
+            && !await _shoppingCartService.ShoppingCartIsRecurringAsync(cart)
+            && !await _shoppingCartService.ShoppingCartIsRewardPointsRedemptionDisabledAsync(cart))
         {
             var shoppingCartTotal = await _orderTotalCalculationService.GetShoppingCartTotalAsync(cart, true, false);
             if (shoppingCartTotal.redeemedRewardPoints > 0)

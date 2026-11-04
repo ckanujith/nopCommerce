@@ -83,6 +83,15 @@
             <span asp-validation-for="DisableBuyButton"></span>
         </div>
     </div>
+    <div class="form-group row @(Model.ProductEditorSettingsModel.DisableRewardPointsRedemption ? null : "advanced-setting")">
+        <div class="col-md-3">
+            <nop-label asp-for="DisableRewardPointsRedemption" />
+        </div>
+        <div class="col-md-9">
+            <nop-editor asp-for="DisableRewardPointsRedemption" />
+            <span asp-validation-for="DisableRewardPointsRedemption"></span>
+        </div>
+    </div>
     <div class="form-group row @(Model.ProductEditorSettingsModel.DisableWishlistButton ? null : "advanced-setting")">
         <div class="col-md-3">
             <nop-label asp-for="DisableWishlistButton" />
