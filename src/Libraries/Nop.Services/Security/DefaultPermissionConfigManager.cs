@@ -98,6 +98,7 @@ public partial class DefaultPermissionConfigManager : IPermissionConfigManager
         
         new ("Admin area. Discounts. View", StandardPermission.Promotions.DISCOUNTS_VIEW, nameof(StandardPermission.Promotions), NopCustomerDefaults.AdministratorsRoleName, NopCustomerDefaults.VendorsRoleName),
         new ("Admin area. Discounts. Create, edit, delete", StandardPermission.Promotions.DISCOUNTS_CREATE_EDIT_DELETE, nameof(StandardPermission.Promotions), NopCustomerDefaults.AdministratorsRoleName, NopCustomerDefaults.VendorsRoleName),
+        new ("Admin area. Discounts. Import and export", StandardPermission.Promotions.DISCOUNTS_IMPORT_EXPORT, nameof(StandardPermission.Promotions), NopCustomerDefaults.AdministratorsRoleName, NopCustomerDefaults.VendorsRoleName),
         new ("Admin area. Affiliates. View", StandardPermission.Promotions.AFFILIATES_VIEW, nameof(StandardPermission.Promotions), NopCustomerDefaults.AdministratorsRoleName),
         new ("Admin area. Affiliates. Create, edit, delete", StandardPermission.Promotions.AFFILIATES_CREATE_EDIT_DELETE, nameof(StandardPermission.Promotions), NopCustomerDefaults.AdministratorsRoleName),
         new ("Admin area. Newsletter Subscribers. View", StandardPermission.Promotions.SUBSCRIBERS_VIEW, nameof(StandardPermission.Promotions), NopCustomerDefaults.AdministratorsRoleName),

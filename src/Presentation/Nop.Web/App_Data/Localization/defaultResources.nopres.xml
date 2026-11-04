@@ -1164,6 +1164,9 @@
   <LocaleResource Name="ActivityLog.ExportManufacturers">
     <Value>{0} manufacturers were exported</Value>
   </LocaleResource>
+  <LocaleResource Name="ActivityLog.ExportDiscounts">
+    <Value>{0} discounts were exported</Value>
+  </LocaleResource>
   <LocaleResource Name="ActivityLog.ExportNewsLetterSubscriptions">
     <Value>{0} newsletter subscriptions were exported</Value>
   </LocaleResource>
@@ -1202,6 +1205,9 @@
   </LocaleResource>
   <LocaleResource Name="ActivityLog.ImportManufacturers">
     <Value>{0} manufacturers were imported</Value>
+  </LocaleResource>
+  <LocaleResource Name="ActivityLog.ImportDiscounts">
+    <Value>{0} discounts were imported</Value>
   </LocaleResource>
   <LocaleResource Name="ActivityLog.ImportOrders">
     <Value>{0} orders were imported</Value>
@@ -14811,6 +14817,12 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Promotions.Discounts.Deleted">
     <Value>The discount has been deleted successfully.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Promotions.Discounts.Imported">
+    <Value>Discounts have been imported successfully.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Promotions.Discounts.List.ImportFromExcelTip">
+    <Value>Imported discounts are distinguished by ID. If the ID already exists, then its corresponding discount will be updated. You should not specify ID (leave 0) for new discounts. Duplicate names and coupon codes are allowed.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Promotions.Discounts.EditDiscountDetails">
     <Value>Edit discount details</Value>

@@ -5,6 +5,7 @@ using Nop.Core;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
+using Nop.Core.Domain.Discounts;
 using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
@@ -17,6 +18,7 @@ using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
 using Nop.Services.Directory;
+using Nop.Services.Discounts;
 using Nop.Services.ExportImport;
 using Nop.Services.ExportImport.Help;
 using Nop.Services.Orders;
@@ -39,6 +41,7 @@ public class ExportManagerTests : ServiceTest
     private ICountryService _countryService;
     private ICustomerService _customerService;
     private IDateRangeService _dateRangeService;
+    private IDiscountService _discountService;
     private IExportManager _exportManager;
     private IManufacturerService _manufacturerService;
     private IMeasureService _measureService;
@@ -61,6 +64,7 @@ public class ExportManagerTests : ServiceTest
         _countryService = GetService<ICountryService>();
         _customerService = GetService<ICustomerService>();
         _dateRangeService = GetService<IDateRangeService>();
+        _discountService = GetService<IDiscountService>();
         _exportManager = GetService<IExportManager>();
         _manufacturerService = GetService<IManufacturerService>();
         _measureService = GetService<IMeasureService>();
@@ -327,6 +331,37 @@ public class ExportManagerTests : ServiceTest
         PropertiesShouldEqual(manufacturer, manager, new Dictionary<string, string>());
 
         manager.GetDefaultProperties.First(p => p.PropertyName == "Picture").PropertyValue.Should().NotBeNull();
+    }
+
+    [Test]
+    public async Task CanExportDiscountsToXlsx()
+    {
+        var discounts = await _discountService.GetAllDiscountsAsync(showHidden: true, isActive: null);
+        discounts.Any().Should().BeTrue();
+
+        // Prefer a name that Excel won't treat as a leading apostrophe escape.
+        var discount = discounts.FirstOrDefault(d => !d.Name.StartsWith('\'')) ?? discounts.First();
+        var excelData = await _exportManager.ExportDiscountsToXlsxAsync([discount]);
+        var workbook = GetWorkbook(excelData);
+        var manager = GetPropertyManager<Discount>(workbook, _catalogSettings);
+
+        var worksheet = workbook.Worksheets.FirstOrDefault()
+                        ?? throw new NopException("No worksheet found");
+
+        manager.SetSelectList("DiscountType", await DiscountType.AssignedToOrderTotal.ToSelectListAsync(useLocalization: false));
+        manager.SetSelectList("DiscountLimitation", await DiscountLimitationType.Unlimited.ToSelectListAsync(useLocalization: false));
+        manager.ReadDefaultFromXlsx(worksheet, 2);
+
+        var pairs = new Dictionary<string, string>
+        {
+            ["DiscountType"] = "DiscountTypeId",
+            ["DiscountLimitation"] = "DiscountLimitationId"
+        };
+        var ignore = new List<string> { "DiscountType", "DiscountLimitation", "EntityCacheKey" };
+        ignore.AddRange(pairs.Values);
+
+        AreAllObjectPropertiesPresent(discount, manager, ignore.ToArray());
+        PropertiesShouldEqual(discount, manager, pairs);
     }
 
     [Test]
