@@ -247,7 +247,17 @@ public partial class PropertyByName<T>
     /// <summary>
     /// Converted property value to nullable DateTime
     /// </summary>
-    public DateTime? DateTimeNullable => string.IsNullOrWhiteSpace(StringValue) ? null : PropertyValue as DateTime?;
+    public DateTime? DateTimeNullable
+    {
+        get
+        {
+            //a date spreadsheet cell is an XLCellValue, not a DateTime, so a cast drops the value
+            if (PropertyValue is XLCellValue cellValue)
+                return cellValue.IsDateTime ? cellValue.GetDateTime() : null;
+
+            return string.IsNullOrWhiteSpace(StringValue) ? null : PropertyValue as DateTime?;
+        }
+    }
 
     /// <summary>
     /// Converted property value to guid

@@ -3274,10 +3274,10 @@ public partial class ImportManager : IImportManager
                         discount.MaximumDiscountAmount = property.DecimalValueNullable;
                         break;
                     case "StartDateUtc":
-                        discount.EndDateUtc = property.DateTimeNullable;
+                        discount.StartDateUtc = property.DateTimeNullable;
                         break;
                     case "EndDateUtc":
-                        discount.StartDateUtc = property.DateTimeNullable;
+                        discount.EndDateUtc = property.DateTimeNullable;
                         break;
                     case "RequiresCouponCode":
                         discount.RequiresCouponCode = property.BooleanValue;

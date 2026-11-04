@@ -81,6 +81,31 @@ public class PropertyByNameTests
     }
 
     [Test]
+    public void CanReadDateCellValue()
+    {
+        var start = new DateTime(2026, 3, 1, 8, 0, 0);
+        var property = CreateProperty((XLCellValue)start);
+
+        property.DateTimeNullable.Should().Be(start);
+    }
+
+    [Test]
+    public void CanReadBoxedDateTimeValue()
+    {
+        var start = new DateTime(2026, 3, 1, 8, 0, 0);
+        var property = CreateProperty(start);
+
+        property.DateTimeNullable.Should().Be(start);
+    }
+
+    [Test]
+    public void BlankDateCellValueReturnsNull()
+    {
+        CreateProperty(XLCellValue.FromObject(null)).DateTimeNullable.Should().BeNull();
+        CreateProperty(null).DateTimeNullable.Should().BeNull();
+    }
+
+    [Test]
     public void NonNumericValueReturnsDefault()
     {
         var blank = CreateProperty(XLCellValue.FromObject(null));
