@@ -1,0 +1,622 @@
+#!/usr/bin/env bash
+# control-nopcommerce — launch, doctor, install, drive, and cleanup an isolated nopCommerce instance.
+# Verification scaffolding only. Never drive the shared start-script instance on :5000.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HELPERS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STATE_ROOT="${NOP_VERIFY_STATE_ROOT:-/tmp/nopcommerce-verify}"
+CACHE_DIR="${NOP_VERIFY_CACHE_DIR:-/tmp/nopcommerce-verify-cache/publish}"
+EVIDENCE_ROOT="${NOP_VERIFY_EVIDENCE_ROOT:-/opt/cursor/artifacts/verify-nopcommerce}"
+REPO_APPSETTINGS="${ROOT}/src/Presentation/Nop.Web/App_Data/appsettings.json"
+PGUSER_DEFAULT="${NOP_VERIFY_PGUSER:-nopcommerce}"
+PGPASS_DEFAULT="${NOP_VERIFY_PGPASS:-nopCommerce_db_password}"
+PGHOST_DEFAULT="${NOP_VERIFY_PGHOST:-127.0.0.1}"
+ADMIN_EMAIL_DEFAULT="${NOP_VERIFY_ADMIN_EMAIL:-admin@nopverify.local}"
+ADMIN_PASS_DEFAULT="${NOP_VERIFY_ADMIN_PASSWORD:-NopVerify!23456}"
+SHARED_FORBIDDEN_PORT=5000
+
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_NOLOGO=1
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export PATH="/usr/share/dotnet:/usr/local/bin:${PATH}"
+
+die() { echo "control-nopcommerce: $*" >&2; exit 1; }
+need() { command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"; }
+
+current_pointer() { echo "${STATE_ROOT}/current"; }
+
+resolve_run_id() {
+  if [[ -n "${NOP_VERIFY_RUN_ID:-}" ]]; then
+    echo "${NOP_VERIFY_RUN_ID}"
+    return
+  fi
+  if [[ -f "$(current_pointer)" ]]; then
+    cat "$(current_pointer)"
+    return
+  fi
+  die "no active run; set NOP_VERIFY_RUN_ID or run launch first"
+}
+
+run_dir() {
+  local id="$1"
+  echo "${STATE_ROOT}/${id}"
+}
+
+state_file() {
+  echo "$(run_dir "$1")/state.json"
+}
+
+load_state_field() {
+  local field="$1"
+  local id
+  id="$(resolve_run_id)"
+  python3 - "$field" "$(state_file "$id")" <<'PY'
+import json,sys
+field,path=sys.argv[1],sys.argv[2]
+with open(path) as f: d=json.load(f)
+v=d.get(field)
+if v is None:
+    raise SystemExit(f"missing state field: {field}")
+print(v)
+PY
+}
+
+write_state() {
+  local id="$1"
+  local path
+  path="$(state_file "$id")"
+  python3 - "$path" <<'PY'
+import json,sys,os
+path=sys.argv[1]
+d=json.load(sys.stdin)
+os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(path,"w") as f: json.dump(d,f,indent=2)
+print(path)
+PY
+}
+
+ensure_postgres() {
+  if ! sudo -u postgres pg_isready -q; then
+    sudo service postgresql start
+  fi
+  local ready=0
+  for _ in $(seq 1 60); do
+    if sudo -u postgres pg_isready -q; then ready=1; break; fi
+    sleep 1
+  done
+  [[ "$ready" -eq 1 ]] || die "PostgreSQL did not become ready"
+  sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${PGUSER_DEFAULT}') THEN
+    CREATE ROLE ${PGUSER_DEFAULT} LOGIN SUPERUSER PASSWORD '${PGPASS_DEFAULT}';
+  ELSE
+    ALTER ROLE ${PGUSER_DEFAULT} WITH LOGIN SUPERUSER PASSWORD '${PGPASS_DEFAULT}';
+  END IF;
+END
+\$\$;
+SQL
+}
+
+pick_port() {
+  local preferred="${1:-}"
+  python3 - "$preferred" "$SHARED_FORBIDDEN_PORT" <<'PY'
+import socket,sys
+preferred=sys.argv[1]
+forbidden=int(sys.argv[2])
+candidates=[]
+if preferred:
+    candidates.append(int(preferred))
+candidates.extend(range(5100, 5200))
+for p in candidates:
+    if p == forbidden:
+        continue
+    s=socket.socket()
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("127.0.0.1", p))
+        print(p)
+        raise SystemExit(0)
+    except OSError:
+        pass
+    finally:
+        s.close()
+raise SystemExit("no free port in 5100-5199")
+PY
+}
+
+ensure_publish_cache() {
+  if [[ -f "${CACHE_DIR}/Nop.Web.dll" ]]; then
+    return
+  fi
+  echo "control-nopcommerce: publishing Nop.Web to ${CACHE_DIR}"
+  mkdir -p "$(dirname "$CACHE_DIR")"
+  need dotnet
+  (cd "$ROOT" && dotnet publish src/Presentation/Nop.Web/Nop.Web.csproj -c Debug -o "$CACHE_DIR")
+  [[ -f "${CACHE_DIR}/Nop.Web.dll" ]] || die "publish failed: Nop.Web.dll missing"
+}
+
+seed_appsettings() {
+  local app_dir="$1"
+  python3 - "$REPO_APPSETTINGS" "${app_dir}/App_Data/appsettings.json" <<'PY'
+import json,sys,pathlib
+src,dst=map(pathlib.Path, sys.argv[1:])
+d=json.loads(src.read_text(encoding="utf-8-sig"))
+d["ConnectionStrings"]["ConnectionString"]=""
+d["ConnectionStrings"]["DataProvider"]="sqlserver"
+d["WebOptimizer"]["CacheDirectory"]=str(dst.parent.parent/"wwwroot"/"bundles")
+# verification scaffolding: App_Data/*.json is excluded from publish by Nop.Web.csproj
+dst.parent.mkdir(parents=True, exist_ok=True)
+dst.write_text(json.dumps(d, indent=2) + "\n")
+print(f"seeded verification scaffolding appsettings at {dst}")
+PY
+  mkdir -p "${app_dir}/wwwroot/bundles" "${app_dir}/logs" "${app_dir}/bin" \
+    "${app_dir}/wwwroot/images/thumbs" "${app_dir}/wwwroot/images/uploaded" \
+    "${app_dir}/wwwroot/files/exportimport" "${app_dir}/wwwroot/db_backups" \
+    "${app_dir}/wwwroot/sitemaps" "${app_dir}/Plugins/Uploaded"
+}
+
+start_watchdog() {
+  local id="$1"
+  local app_dir port log_file pid_file
+  app_dir="$(load_state_field app_dir)"
+  port="$(load_state_field port)"
+  log_file="$(run_dir "$id")/nopcommerce.log"
+  pid_file="$(run_dir "$id")/watchdog.pid"
+  cat >"$(run_dir "$id")/watchdog.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+cd "${app_dir}"
+export ASPNETCORE_ENVIRONMENT=Development
+export ASPNETCORE_URLS="http://127.0.0.1:${port}"
+export DOTNET_ROOT=/usr/share/dotnet
+export PATH="/usr/share/dotnet:/usr/local/bin:\${PATH}"
+while [[ -f "$(run_dir "$id")/KEEP_RUNNING" ]]; do
+  echo "[\$(date -u +%Y-%m-%dT%H:%M:%SZ)] starting Nop.Web on :${port}" >>"${log_file}"
+  dotnet Nop.Web.dll >>"${log_file}" 2>&1 || true
+  echo "[\$(date -u +%Y-%m-%dT%H:%M:%SZ)] Nop.Web exited; restarting in 2s" >>"${log_file}"
+  sleep 2
+done
+EOF
+  chmod +x "$(run_dir "$id")/watchdog.sh"
+  touch "$(run_dir "$id")/KEEP_RUNNING"
+  nohup bash "$(run_dir "$id")/watchdog.sh" >/dev/null 2>&1 &
+  echo $! >"$pid_file"
+}
+
+wait_ready() {
+  local port="$1"
+  local path="${2:-/install}"
+  local seconds="${3:-120}"
+  local code
+  for _ in $(seq 1 "$seconds"); do
+    code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}${path}" || true)"
+    if [[ "$code" == "200" || "$code" == "302" ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+  die "instance on :${port} not ready for ${path} within ${seconds}s"
+}
+
+cmd_launch() {
+  local port="" run_id=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --port) port="$2"; shift 2 ;;
+      --run-id) run_id="$2"; shift 2 ;;
+      *) die "unknown launch arg: $1" ;;
+    esac
+  done
+  need dotnet; need curl; need python3; need cp
+  ensure_postgres
+  ensure_publish_cache
+
+  run_id="${run_id:-$(date +%Y%m%d%H%M%S)-$$}"
+  port="$(pick_port "$port")"
+  [[ "$port" != "$SHARED_FORBIDDEN_PORT" ]] || die "refusing shared port ${SHARED_FORBIDDEN_PORT}"
+
+  local dir app_dir evidence db_name
+  dir="$(run_dir "$run_id")"
+  app_dir="${dir}/app"
+  evidence="${EVIDENCE_ROOT}/${run_id}"
+  db_name="nop_verify_$(printf '%s' "$run_id" | tr -c 'A-Za-z0-9' '_' | cut -c1-40)"
+  db_name="${db_name%%_}" # trim trailing underscore from tr edge cases
+
+  rm -rf "$dir"
+  mkdir -p "$app_dir" "$evidence" "${dir}/scratch"
+  cp -a "${CACHE_DIR}/." "$app_dir/"
+  seed_appsettings "$app_dir"
+
+  # Pre-create DB + extensions so install can skip privilege surprises.
+  sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+SELECT 'CREATE DATABASE ${db_name} OWNER ${PGUSER_DEFAULT}'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${db_name}')\gexec
+GRANT ALL PRIVILEGES ON DATABASE ${db_name} TO ${PGUSER_DEFAULT};
+SQL
+  sudo -u postgres psql -d "$db_name" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+
+  python3 - "$(state_file "$run_id")" <<PY
+import json,sys,time
+path=sys.argv[1]
+state={
+  "run_id": "${run_id}",
+  "port": int("${port}"),
+  "url": "http://127.0.0.1:${port}",
+  "app_dir": "${app_dir}",
+  "evidence_dir": "${evidence}",
+  "db_name": "${db_name}",
+  "pg_host": "${PGHOST_DEFAULT}",
+  "pg_user": "${PGUSER_DEFAULT}",
+  "admin_email": "${ADMIN_EMAIL_DEFAULT}",
+  "admin_password": "${ADMIN_PASS_DEFAULT}",
+  "installed": False,
+  "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+  "forbidden_shared_port": ${SHARED_FORBIDDEN_PORT},
+}
+open(path,"w").write(json.dumps(state, indent=2)+"\n")
+print(path)
+PY
+  mkdir -p "$STATE_ROOT"
+  echo "$run_id" >"$(current_pointer)"
+  export NOP_VERIFY_RUN_ID="$run_id"
+  start_watchdog "$run_id"
+  wait_ready "$port" /install 180
+  echo "launched run_id=${run_id} url=http://127.0.0.1:${port} evidence=${evidence}"
+  echo "IMPORTANT: refuse to drive any instance other than this run (not :${SHARED_FORBIDDEN_PORT})."
+}
+
+cmd_doctor() {
+  local id port url app_dir evidence pid_file installed code body
+  id="$(resolve_run_id)"
+  port="$(load_state_field port)"
+  url="$(load_state_field url)"
+  app_dir="$(load_state_field app_dir)"
+  evidence="$(load_state_field evidence_dir)"
+  [[ "$port" != "$SHARED_FORBIDDEN_PORT" ]] || die "doctor refuses shared port ${SHARED_FORBIDDEN_PORT}"
+  pid_file="$(run_dir "$id")/watchdog.pid"
+  [[ -f "$pid_file" ]] || die "watchdog.pid missing; this run was not started by control-nopcommerce"
+  local wpid
+  wpid="$(cat "$pid_file")"
+  if ! kill -0 "$wpid" 2>/dev/null; then
+    die "watchdog pid ${wpid} is not running"
+  fi
+  [[ -f "${app_dir}/Nop.Web.dll" ]] || die "Nop.Web.dll missing under ${app_dir}"
+  installed="$(python3 - "$(state_file "$id")" <<'PY'
+import json,sys
+print(json.load(open(sys.argv[1])).get("installed", False))
+PY
+)"
+  local body="" code="000" marker_ok=0
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    code="$(curl -s -o /tmp/nop-doctor-body.$$ -w '%{http_code}' "$url/" || true)"
+    body="$(cat /tmp/nop-doctor-body.$$ 2>/dev/null || true)"
+    rm -f /tmp/nop-doctor-body.$$
+    if [[ "$installed" == "True" || "$installed" == "true" ]]; then
+      if [[ "$code" == "200" ]] && echo "$body" | grep -qiE 'product-item|product-title|header-logo|topic-block|html-home-page|generator" content="nopCommerce'; then
+        marker_ok=1
+        break
+      fi
+    else
+      if [[ "$code" == "302" || "$code" == "200" ]]; then
+        marker_ok=1
+        break
+      fi
+    fi
+    sleep 2
+  done
+  if [[ "$installed" == "True" || "$installed" == "true" ]]; then
+    [[ "$code" == "200" ]] || die "expected homepage 200 after install, got ${code}"
+    [[ "$marker_ok" -eq 1 ]] || die "homepage body missing store markers"
+  else
+    [[ "$marker_ok" -eq 1 ]] || die "unexpected status ${code} before install"
+  fi
+  # Confirm port owner is under our app dir (best-effort via /proc)
+  local listener
+  listener="$(python3 - "$port" <<'PY'
+import os,sys
+port=int(sys.argv[1])
+# parse /proc/net/tcp for local port
+needle=format(port,'04X')
+pids=[]
+with open('/proc/net/tcp') as f:
+    next(f)
+    for line in f:
+        parts=line.split()
+        local=parts[1]
+        ip,p=local.split(':')
+        if p.upper()==needle and parts[3]=='0A':
+            inode=parts[9]
+            break
+    else:
+        print(''); raise SystemExit
+# find pid by inode
+for pid in os.listdir('/proc'):
+    if not pid.isdigit(): continue
+    fd=f'/proc/{pid}/fd'
+    try:
+        for name in os.listdir(fd):
+            try:
+                target=os.readlink(f'{fd}/{name}')
+            except OSError:
+                continue
+            if target==f'socket:[{inode}]':
+                print(pid); raise SystemExit
+    except (FileNotFoundError, PermissionError):
+        continue
+print('')
+PY
+)"
+  if [[ -n "$listener" ]]; then
+    local cwd
+    cwd="$(readlink -f "/proc/${listener}/cwd" 2>/dev/null || true)"
+    if [[ -n "$cwd" && "$cwd" != "$app_dir" ]]; then
+      die "port ${port} owned by pid ${listener} cwd=${cwd}, expected ${app_dir}"
+    fi
+  fi
+  cat <<EOF
+doctor: OK
+run_id=${id}
+url=${url}
+port=${port}
+app_dir=${app_dir}
+evidence_dir=${evidence}
+watchdog_pid=${wpid}
+installed=${installed}
+homepage_status=${code}
+EOF
+}
+
+cmd_install() {
+  local id port url db_name admin_email admin_password jar html token
+  id="$(resolve_run_id)"
+  port="$(load_state_field port)"
+  url="$(load_state_field url)"
+  db_name="$(load_state_field db_name)"
+  admin_email="$(load_state_field admin_email)"
+  admin_password="$(load_state_field admin_password)"
+  jar="$(run_dir "$id")/cookies.txt"
+  need curl
+
+  cmd_doctor >/dev/null
+
+  local install_html
+  install_html="$(run_dir "$id")/install-get.html"
+  curl -s -c "$jar" -b "$jar" "${url}/install" -o "$install_html"
+  token="$(python3 - "$install_html" <<'PY'
+import sys,re
+html=open(sys.argv[1],encoding='utf-8',errors='ignore').read()
+m=re.search(r'name="__RequestVerificationToken"[^>]*value="([^"]+)"', html)
+if not m:
+    m=re.search(r'value="([^"]+)"[^>]*name="__RequestVerificationToken"', html)
+if not m:
+    raise SystemExit('antiforgery token not found on /install')
+print(m.group(1))
+PY
+)"
+
+  echo "control-nopcommerce: posting install wizard (sample data on)..."
+  # Long timeout: sample data install can take several minutes.
+  local resp_file status
+  resp_file="$(run_dir "$id")/install-response.html"
+  status="$(curl -s -c "$jar" -b "$jar" -X POST "${url}/install" \
+    --max-time 900 \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data-urlencode "__RequestVerificationToken=${token}" \
+    --data-urlencode "AdminEmail=${admin_email}" \
+    --data-urlencode "AdminPassword=${admin_password}" \
+    --data-urlencode "ConfirmPassword=${admin_password}" \
+    --data-urlencode "Country=US-en-US" \
+    --data-urlencode "InstallSampleData=true" \
+    --data-urlencode "SubscribeNewsletters=false" \
+    --data-urlencode "DataProvider=3" \
+    --data-urlencode "CreateDatabaseIfNotExists=true" \
+    --data-urlencode "ConnectionStringRaw=false" \
+    --data-urlencode "ServerName=${PGHOST_DEFAULT}" \
+    --data-urlencode "DatabaseName=${db_name}" \
+    --data-urlencode "Username=${PGUSER_DEFAULT}" \
+    --data-urlencode "Password=${PGPASS_DEFAULT}" \
+    --data-urlencode "IntegratedSecurity=false" \
+    --data-urlencode "UseCustomCollation=false" \
+    -o "$resp_file" -w '%{http_code}' || true)"
+  echo "$status" >"$(run_dir "$id")/install-status.txt"
+
+  # Success page sets RestartUrl and relies on browser JS to hit the restart endpoint.
+  # Curl does not run that JS, so force a clean process recycle via the watchdog.
+  if ! grep -qE "window\.location\.replace\('/'\)|RestartUrl|RestartProgress" "$resp_file"; then
+    if grep -qiE 'SetupFailed|message-error validation-summary-errors|DatabaseCreationError' "$resp_file"; then
+      die "install form returned errors; see ${resp_file}"
+    fi
+    die "install response missing restart marker (HTTP ${status}); see ${resp_file} and $(run_dir "$id")/nopcommerce.log"
+  fi
+
+  echo "control-nopcommerce: install finished; recycling Nop.Web so IsDatabaseInstalled reloads..."
+  # Prefer the official restart endpoint, then fall back to killing only this app_dir's process.
+  curl -s -c "$jar" -b "$jar" "${url}/Install/RestartApplication" -o /dev/null || true
+  sleep 2
+  local app_dir
+  app_dir="$(load_state_field app_dir)"
+  python3 - "$app_dir" <<'PY'
+import os,sys,signal,time
+app=os.path.realpath(sys.argv[1])
+
+def targets():
+    for pid in os.listdir('/proc'):
+        if not pid.isdigit():
+            continue
+        try:
+            cwd=os.path.realpath(f'/proc/{pid}/cwd')
+        except Exception:
+            continue
+        if cwd != app:
+            continue
+        try:
+            cmd=open(f'/proc/{pid}/cmdline','rb').read().decode('utf-8','ignore')
+        except Exception:
+            continue
+        # Never kill the bash watchdog — only the Kestrel host.
+        if 'Nop.Web.dll' in cmd:
+            yield int(pid)
+
+for pid in targets():
+    try: os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError: pass
+time.sleep(2)
+for pid in targets():
+    try: os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError: pass
+PY
+
+  echo "control-nopcommerce: waiting for post-install homepage..."
+  local ok=0
+  for _ in $(seq 1 180); do
+    local code
+    code="$(curl -s -o /tmp/nop-home.$$ -w '%{http_code}' "${url}/" || true)"
+    if [[ "$code" == "200" ]] && grep -qiE 'product-item|product-title|header-logo|topic-block|footer-upper' /tmp/nop-home.$$; then
+      ok=1
+      break
+    fi
+    sleep 2
+  done
+  rm -f /tmp/nop-home.$$
+  [[ "$ok" -eq 1 ]] || die "install did not yield a usable homepage; see $(run_dir "$id")/nopcommerce.log and ${resp_file}"
+
+  python3 - "$(state_file "$id")" <<'PY'
+import json,sys
+path=sys.argv[1]
+d=json.load(open(path))
+d["installed"]=True
+open(path,"w").write(json.dumps(d, indent=2)+"\n")
+PY
+  echo "install: OK admin=${admin_email} db=${db_name}"
+  cmd_doctor
+}
+
+cmd_http() {
+  local method="${1:-GET}"; shift || true
+  local path="${1:-/}"; shift || true
+  local url port
+  port="$(load_state_field port)"
+  url="$(load_state_field url)"
+  [[ "$port" != "$SHARED_FORBIDDEN_PORT" ]] || die "refusing shared port"
+  curl -sS -D - "${url}${path}" "$@"
+}
+
+cmd_browser() {
+  need node
+  local url evidence
+  url="$(load_state_field url)"
+  evidence="$(load_state_field evidence_dir)"
+  export NOP_VERIFY_URL="$url"
+  export NOP_VERIFY_EVIDENCE_DIR="$evidence"
+  export NOP_VERIFY_ADMIN_EMAIL
+  NOP_VERIFY_ADMIN_EMAIL="$(load_state_field admin_email)"
+  export NOP_VERIFY_ADMIN_PASSWORD
+  NOP_VERIFY_ADMIN_PASSWORD="$(load_state_field admin_password)"
+  export NOP_VERIFY_RUN_ID
+  NOP_VERIFY_RUN_ID="$(resolve_run_id)"
+  node "${HELPERS_DIR}/browser.mjs" "$@"
+}
+
+cmd_cleanup() {
+  local id dir evidence pid_file db_name keep_evidence=1
+  id="$(resolve_run_id)"
+  dir="$(run_dir "$id")"
+  evidence="$(load_state_field evidence_dir)"
+  db_name="$(load_state_field db_name)"
+  pid_file="${dir}/watchdog.pid"
+
+  rm -f "${dir}/KEEP_RUNNING"
+  if [[ -f "$pid_file" ]]; then
+    local wpid
+    wpid="$(cat "$pid_file")"
+    if kill -0 "$wpid" 2>/dev/null; then
+      kill "$wpid" 2>/dev/null || true
+      sleep 1
+      kill -9 "$wpid" 2>/dev/null || true
+    fi
+  fi
+  # Kill only Nop.Web processes whose cwd is this run's app_dir
+  local app_dir
+  app_dir="$(load_state_field app_dir)"
+  python3 - "$app_dir" <<'PY'
+import os,sys,signal,time
+app=os.path.realpath(sys.argv[1])
+
+def targets():
+    for pid in os.listdir('/proc'):
+        if not pid.isdigit():
+            continue
+        try:
+            cwd=os.path.realpath(f'/proc/{pid}/cwd')
+        except Exception:
+            continue
+        if cwd != app:
+            continue
+        try:
+            cmd=open(f'/proc/{pid}/cmdline','rb').read().decode('utf-8','ignore')
+        except Exception:
+            continue
+        if 'Nop.Web.dll' in cmd:
+            yield int(pid)
+
+for pid in targets():
+    try: os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError: pass
+time.sleep(1)
+for pid in targets():
+    try: os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError: pass
+PY
+
+  # Drop disposable DB
+  ensure_postgres || true
+  sudo -u postgres psql -v ON_ERROR_STOP=0 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${db_name}' AND pid <> pg_backend_pid();" >/dev/null 2>&1 || true
+  sudo -u postgres psql -v ON_ERROR_STOP=0 -c "DROP DATABASE IF EXISTS ${db_name};" >/dev/null 2>&1 || true
+
+  # Remove scratch/instance; keep evidence
+  rm -rf "$dir"
+  if [[ -f "$(current_pointer)" ]] && [[ "$(cat "$(current_pointer)")" == "$id" ]]; then
+    rm -f "$(current_pointer)"
+  fi
+  echo "cleanup: removed instance ${id}; evidence retained at ${evidence}"
+  ls -la "$evidence" 2>/dev/null || echo "evidence dir empty or missing"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: control-nopcommerce <command> [args]
+
+Commands:
+  launch [--port N] [--run-id ID]   Start isolated instance (never :5000)
+  doctor                            Read-only health check for the active run
+  install                           Run install wizard with sample data
+  browser <subcommand>              Playwright drive (see browser.mjs --help)
+  http [METHOD] [path]              Raw HTTP against the active instance
+  cleanup                           Tear down instance + DB; keep evidence
+
+Env:
+  NOP_VERIFY_RUN_ID   Active run id
+  NOP_VERIFY_STATE_ROOT   Default /tmp/nopcommerce-verify
+  NOP_VERIFY_EVIDENCE_ROOT  Default /opt/cursor/artifacts/verify-nopcommerce
+EOF
+}
+
+main() {
+  local cmd="${1:-}"; shift || true
+  case "$cmd" in
+    launch) cmd_launch "$@" ;;
+    doctor) cmd_doctor "$@" ;;
+    install) cmd_install "$@" ;;
+    browser) cmd_browser "$@" ;;
+    http) cmd_http "$@" ;;
+    cleanup) cmd_cleanup "$@" ;;
+    -h|--help|help|"") usage ;;
+    *) die "unknown command: ${cmd}" ;;
+  esac
+}
+
+main "$@"
