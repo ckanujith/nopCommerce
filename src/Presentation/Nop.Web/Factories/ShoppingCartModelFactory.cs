@@ -935,6 +935,8 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
             return model;
 
         model.IsEditable = isEditable;
+        //NOPCOM-SDLC-20261104-001
+        model.ShowClearCartButton = isEditable && _shoppingCartSettings.ShowClearCartButton;
         model.ShowProductImages = _shoppingCartSettings.ShowProductImagesOnShoppingCart;
         model.ShowSku = _catalogSettings.ShowSkuOnProductDetailsPage;
         model.ShowVendorName = _vendorSettings.ShowVendorOnOrderDetailsPage;

@@ -3,6 +3,7 @@ using Nop.Core;
 using Nop.Core.Domain.Orders;
 using Nop.Data;
 using Nop.Services.Catalog;
+using Nop.Services.Configuration;
 using Nop.Services.Customers;
 using Nop.Services.Localization;
 using Nop.Services.Orders;
@@ -94,6 +95,7 @@ public class ShoppingCartModelFactoryTests : WebTest
             new List<ShoppingCartItem> { _shoppingCartItem });
 
         model.IsEditable.Should().BeTrue();
+        model.ShowClearCartButton.Should().BeTrue();
         model.Items.Any().Should().BeTrue();
         model.Items.Count.Should().Be(1);
         model.Warnings.Count.Should().Be(0);
@@ -179,5 +181,64 @@ public class ShoppingCartModelFactoryTests : WebTest
 
         model.FullSizeImageUrl.Should().Be($"http://{NopTestsDefaults.HostIpAddress}/images/thumbs/0000020_build-your-own-computer.jpeg");
         model.ThumbImageUrl.Should().BeNull();
+    }
+
+    //NOPCOM-SDLC-20261104-001
+    [Test]
+    public async Task PrepareShoppingCartModel_ShowsClearCartButton_WhenCartIsEditableAndSettingIsOn()
+    {
+        var model = await _shoppingCartModelFactory.PrepareShoppingCartModelAsync(new ShoppingCartModel(),
+            new List<ShoppingCartItem> { _shoppingCartItem }, isEditable: true);
+
+        model.IsEditable.Should().BeTrue();
+        model.ShowClearCartButton.Should().BeTrue();
+    }
+
+    //NOPCOM-SDLC-20261104-001
+    [Test]
+    public async Task PrepareShoppingCartModel_HidesClearCartButton_WhenCartIsEmpty()
+    {
+        var model = await _shoppingCartModelFactory.PrepareShoppingCartModelAsync(new ShoppingCartModel(),
+            new List<ShoppingCartItem>());
+
+        model.ShowClearCartButton.Should().BeFalse();
+    }
+
+    //NOPCOM-SDLC-20261104-001
+    [Test]
+    public async Task PrepareShoppingCartModel_HidesClearCartButton_WhenCartIsNotEditable()
+    {
+        var model = await _shoppingCartModelFactory.PrepareShoppingCartModelAsync(new ShoppingCartModel(),
+            new List<ShoppingCartItem> { _shoppingCartItem }, isEditable: false);
+
+        model.IsEditable.Should().BeFalse();
+        model.ShowClearCartButton.Should().BeFalse();
+    }
+
+    //NOPCOM-SDLC-20261104-001
+    [Test]
+    public async Task PrepareShoppingCartModel_HidesClearCartButton_WhenSettingIsOff()
+    {
+        var settingService = GetService<ISettingService>();
+        var settings = GetService<ShoppingCartSettings>();
+        var original = settings.ShowClearCartButton;
+        settings.ShowClearCartButton = false;
+        await settingService.SaveSettingAsync(settings);
+
+        try
+        {
+            var factory = GetService<IShoppingCartModelFactory>();
+            var model = await factory.PrepareShoppingCartModelAsync(new ShoppingCartModel(),
+                new List<ShoppingCartItem> { _shoppingCartItem }, isEditable: true);
+
+            model.IsEditable.Should().BeTrue();
+            model.ShowClearCartButton.Should().BeFalse();
+        }
+        finally
+        {
+            settings = GetService<ShoppingCartSettings>();
+            settings.ShowClearCartButton = original;
+            await settingService.SaveSettingAsync(settings);
+        }
     }
 }

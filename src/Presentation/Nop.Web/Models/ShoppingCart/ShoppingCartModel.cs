@@ -27,6 +27,7 @@ public partial record ShoppingCartModel : BaseNopModel
     public bool ShowSku { get; set; }
     public bool ShowProductImages { get; set; }
     public bool IsEditable { get; set; }
+    public bool ShowClearCartButton { get; set; }
     public bool IsReadyToCheckout { get; set; }
     public IList<ShoppingCartItemModel> Items { get; set; }
 

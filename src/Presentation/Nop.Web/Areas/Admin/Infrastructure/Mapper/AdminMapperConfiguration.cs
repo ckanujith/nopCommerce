@@ -1418,6 +1418,7 @@ public partial class AdminMapperConfiguration : BaseMapperProfile
             .ForMember(model => model.MoveItemsFromWishlistToCart_OverrideForStore, options => options.Ignore())
             .ForMember(model => model.ShowDiscountBox_OverrideForStore, options => options.Ignore())
             .ForMember(model => model.ShowGiftCardBox_OverrideForStore, options => options.Ignore())
+            .ForMember(model => model.ShowClearCartButton_OverrideForStore, options => options.Ignore())
             .ForMember(model => model.ShowProductImagesInMiniShoppingCart_OverrideForStore, options => options.Ignore())
             .ForMember(model => model.ShowProductImagesOnShoppingCart_OverrideForStore, options => options.Ignore())
             .ForMember(model => model.ShowProductImagesOnWishList_OverrideForStore, options => options.Ignore())

@@ -9773,6 +9773,12 @@
   <LocaleResource Name="Admin.Configuration.Settings.ShoppingCart.MoveItemsFromWishlistToCart.Hint">
     <Value>Check to move products from wishlist to the cart when clicking "Add to cart" button. Otherwise, they are copied.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Settings.ShoppingCart.ShowClearCartButton">
+    <Value>Show "Clear cart" button</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Settings.ShoppingCart.ShowClearCartButton.Hint">
+    <Value>Check to show a button on the shopping cart page that removes all items from the cart.</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Settings.ShoppingCart.ShowDiscountBox">
     <Value>Show discount box</Value>
   </LocaleResource>
@@ -20616,6 +20622,12 @@
   </LocaleResource>
   <LocaleResource Name="ShoppingCart.CheckoutAttributes.PriceAdjustment">
     <Value>{0} [{1}]</Value>
+  </LocaleResource>
+  <LocaleResource Name="ShoppingCart.ClearCart">
+    <Value>Clear cart</Value>
+  </LocaleResource>
+  <LocaleResource Name="ShoppingCart.ClearCart.Confirm">
+    <Value>Are you sure you want to remove all items from your cart?</Value>
   </LocaleResource>
   <LocaleResource Name="ShoppingCart.ConflictingShipmentSchedules">
     <Value>Your cart has auto-ship (recurring) items with conflicting shipment schedules. Only one auto-ship schedule is allowed per order.</Value>

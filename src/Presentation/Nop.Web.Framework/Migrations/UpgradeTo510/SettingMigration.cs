@@ -1,5 +1,6 @@
 ﻿using FluentMigrator;
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Orders;
 using Nop.Data;
 using Nop.Data.Migrations;
 using Nop.Web.Framework.Extensions;
@@ -17,6 +18,11 @@ public class SettingMigration : MigrationBase
 
         //#2049
         this.SetSettingIfNotExists<ProductEditorSettings, bool>(settings => settings.DisableRewardPointsRedemption, false);
+
+        //NOPCOM-SDLC-20261104-001
+        // Databases that already applied this 5.10 settings migration do not re-run it.
+        // ShowClearCartButton stays at the C# default (false) on those databases until an admin enables it.
+        this.SetSettingIfNotExists<ShoppingCartSettings, bool>(settings => settings.ShowClearCartButton, true);
     }
 
     public override void Down()
